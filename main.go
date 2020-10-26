@@ -12,6 +12,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 	_ "github.com/joho/godotenv/autoload"
+	"google.golang.org/appengine"
 )
 
 // Tweet モデルの宣言
@@ -32,12 +33,20 @@ func gormConnect() *gorm.DB {
 	if err != nil {
 		log.Fatal(err)
 	}
-	DBMS := os.Getenv("tsubuyaki_DBMS")
+
 	USER := os.Getenv("tsubuyaki_USER")
 	PASS := os.Getenv("tsubuyaki_PASS")
+	CONNECTIONNAME := os.Getenv("tsubuyaki_CONNECTIONNAME")
 	DBNAME := os.Getenv("tsubuyaki_DBNAME")
-	CONNECT := USER + ":" + PASS + "@/" + DBNAME + "?parseTime=true"
-	db, err := gorm.Open(DBMS, CONNECT)
+	localConnection := USER + ":" + PASS + "@/" + DBNAME + "?parseTime=true"
+	cloudSQLConnection := USER + ":" + PASS + "@unix(/cloudsql/" + CONNECTIONNAME + ")/" + DBNAME + "?parseTime=true"
+	var db *gorm.DB
+
+	if appengine.IsAppEngine() {
+		db, err = gorm.Open("mysql", cloudSQLConnection)
+	} else {
+		db, err = gorm.Open("mysql", localConnection)
+	}
 	if err != nil {
 		panic(err.Error())
 	}
